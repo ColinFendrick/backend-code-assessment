@@ -4,18 +4,22 @@ import type { NextPage } from "next";
 import { useQuery } from "react-query";
 
 import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 import TextField from "@mui/material/TextField";
 import Toolbar from "@mui/material/Toolbar";
 import InputAdornment from "@mui/material/InputAdornment";
 
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import { DataGrid, GridColDef, GridSortModel } from "@mui/x-data-grid";
 
 import SearchIcon from "@mui/icons-material/Search";
 
-async function getLoans(page: number = 0, pageSize: number = 10): Promise<any> {
-  const res = await fetch("/api/loans");
+async function getLoans(
+  page: number = 0, 
+  pageSize: number = 10, 
+  search: string = "",
+  sortModel: GridSortModel
+): Promise<any> {
+  const res = await fetch(`/api/loans?page=${page}&pageSize=${pageSize}&search=${search}&field=${sortModel[0]?.field}&sort=${sortModel[0]?.sort}`);
   return res.json();
 }
 
@@ -35,9 +39,15 @@ const Home: NextPage = () => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortModel, setSortModel] = useState<GridSortModel>([
+    {
+      field: "id",
+      sort: "asc",
+    },
+  ]);
 
-  const { data } = useQuery(["loans", page, pageSize], () =>
-    getLoans(page, pageSize)
+  const { data, isLoading } = useQuery(["loans", page, pageSize, searchTerm, sortModel], () =>
+    getLoans(page, pageSize, searchTerm, sortModel)
   );
   const [rows, rowCount] = data ?? [[], 0];
 
@@ -51,6 +61,7 @@ const Home: NextPage = () => {
           label="Search"
           placeholder="search by address or company..."
           sx={{ width: 350, marginBottom: 4}}
+          disabled={isLoading}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -58,16 +69,21 @@ const Home: NextPage = () => {
               </InputAdornment>
             ),
           }}
+          onChange={e => setSearchTerm(e.target.value)}
+          value={searchTerm}
         />
         <DataGrid
           rows={rows}
           columns={columns}
           autoHeight
+          paginationMode="server"
           rowCount={rowCount}
           page={page}
-          pageSize={pageSize}
+          pageSize={rows.length}
           onPageSizeChange={(pageSize) => setPageSize(pageSize)}
           onPageChange={(page) => setPage(page)}
+          sortModel={sortModel}
+          onSortModelChange={(newSortModel) => setSortModel(newSortModel)}
         />
       </Container>
     </>
