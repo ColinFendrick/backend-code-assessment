@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { NextPage } from "next";
 
 import { useQuery } from "react-query";
@@ -13,13 +13,40 @@ import { DataGrid, GridColDef, GridSortModel } from "@mui/x-data-grid";
 
 import SearchIcon from "@mui/icons-material/Search";
 
+const useDebounce = (value: any, delay = 300) => {
+  // State and setters for debounced value
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(
+    () => {
+      // Update debounced value after delay
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+
+      /*
+        Return a cleanup fn to call every time useEffect is re-called.
+        This prevents debouncedValue from changing if value is changed w/in delay.
+      */
+      return () => {
+        clearTimeout(handler);
+      };
+    },
+    [value, delay] // Only re-call if value or delay changes
+  );
+
+  return debouncedValue;
+};
+
 async function getLoans(
-  page: number = 0, 
-  pageSize: number = 10, 
+  page: number = 0,
+  pageSize: number = 10,
   search: string = "",
   sortModel: GridSortModel
 ): Promise<any> {
-  const res = await fetch(`/api/loans?page=${page}&pageSize=${pageSize}&search=${search}&field=${sortModel[0]?.field}&sort=${sortModel[0]?.sort}`);
+  const res = await fetch(
+    `/api/loans?page=${page}&pageSize=${pageSize}&search=${search}&field=${sortModel[0]?.field}&sort=${sortModel[0]?.sort}`
+  );
   return res.json();
 }
 
@@ -39,6 +66,7 @@ const Home: NextPage = () => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm);
   const [sortModel, setSortModel] = useState<GridSortModel>([
     {
       field: "id",
@@ -46,8 +74,9 @@ const Home: NextPage = () => {
     },
   ]);
 
-  const { data, isLoading } = useQuery(["loans", page, pageSize, searchTerm, sortModel], () =>
-    getLoans(page, pageSize, searchTerm, sortModel)
+  const { data } = useQuery(
+    ["loans", page, pageSize, debouncedSearch, sortModel],
+    () => getLoans(page, pageSize, debouncedSearch, sortModel)
   );
   const [rows, rowCount] = data ?? [[], 0];
 
@@ -60,8 +89,7 @@ const Home: NextPage = () => {
         <TextField
           label="Search"
           placeholder="search by address or company..."
-          sx={{ width: 350, marginBottom: 4}}
-          disabled={isLoading}
+          sx={{ width: 350, marginBottom: 4 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -69,7 +97,7 @@ const Home: NextPage = () => {
               </InputAdornment>
             ),
           }}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           value={searchTerm}
         />
         <DataGrid

@@ -1,10 +1,11 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse } from "next";
 
-import camelcaseKeys from 'camelcase-keys'
+import camelcaseKeys from "camelcase-keys";
 
-import { getClient } from 'src/database'
+import { getClient } from "src/database";
 
-const camelToSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+const camelToSnakeCase = (str: string) =>
+  str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 
 type MyQuery = {
   page: number;
@@ -18,10 +19,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const client = getClient()
-  const { page, pageSize, search, field, sort } = req.query as unknown as MyQuery
+  const client = getClient();
+  const { page, pageSize, search, field, sort } =
+    req.query as unknown as MyQuery;
   try {
-    await client.connect()
+    await client.connect();
     const result = await client.query(`
         select
             count(*) over() as full_count,
@@ -43,13 +45,18 @@ export default async function handler(
             ${pageSize}
         offset 
             ${page * pageSize}
-        `)
+        `);
 
-    res.status(200).json([camelcaseKeys(result.rows), parseInt(result.rows[0].full_count)])
+    res
+      .status(200)
+      .json([
+        camelcaseKeys(result.rows),
+        parseInt(result.rows?.[0]?.full_count),
+      ]);
   } catch (err: any) {
-      console.log(err)
-    res.status(500).send(err.message)
+    console.log(err);
+    res.status(500).send(err.message);
   } finally {
-    await client.end()
+    await client.end();
   }
 }
