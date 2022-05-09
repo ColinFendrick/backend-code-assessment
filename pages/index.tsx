@@ -105,13 +105,18 @@ const Home: NextPage = () => {
           columns={columns}
           autoHeight
           paginationMode="server"
+          sortingMode="server"
           rowCount={rowCount}
           page={page}
           pageSize={rows.length}
           onPageSizeChange={(pageSize) => setPageSize(pageSize)}
           onPageChange={(page) => setPage(page)}
           sortModel={sortModel}
-          onSortModelChange={(newSortModel) => setSortModel(newSortModel)}
+          onSortModelChange={(newSortModel) => {
+            if (newSortModel.length === 0)
+              setSortModel([{ ...sortModel[0], sort: "asc" }]);
+            else setSortModel(newSortModel);
+          }}
         />
       </Container>
     </>
